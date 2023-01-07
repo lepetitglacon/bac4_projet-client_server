@@ -1,6 +1,6 @@
 package client
 
-import client.entitiy.Player
+//import client.entitiy.Player
 import client.game.Game
 import client.window.Window
 import java.awt.Graphics
@@ -25,7 +25,7 @@ object Client : JPanel() {
     var window: Window = Window()
     var game: Game? = null
 
-    var pPlayer: Player? = null
+//    var pPlayer: Player? = null
     var playerName: String = ""
 
     init {
@@ -75,7 +75,7 @@ object Client : JPanel() {
         // Read and process the response from the server
         val response = inReader?.readLine()?.split(" ")
         println(response)
-        pPlayer = Player(response!!.get(0), response.get(1).toInt(), response.get(2).toInt())
+//        pPlayer = Player(response!![0], response[1].toInt(), response[2].toInt())
 
         // Start the game
         game = Game()

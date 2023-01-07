@@ -33,6 +33,7 @@ class Window : JFrame() {
                             ClientState.GAME -> {}
                         }
                     }
+                    KeyEvent.VK_BACK_QUOTE -> if (Client.state == ClientState.PLAYER_NAME) Client.playerName = Client.playerName.removeRange(Client.playerName.lastIndex-1, Client.playerName.lastIndex)
                     else -> { if (Client.state == ClientState.PLAYER_NAME) Client.playerName += (e.keyChar) }
                 }
             }
