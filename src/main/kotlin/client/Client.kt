@@ -1,98 +1,72 @@
 package client
 
-//import client.entitiy.Player
-import client.game.Game
-import client.window.Window
-import java.awt.Graphics
-import java.awt.Graphics2D
+import common.Player
+import common.Request
+import common.RequestType
 import java.io.*
+import java.lang.Exception
 import java.net.Socket
-import java.util.*
+import javax.swing.JFrame
 import javax.swing.JPanel
-import javax.swing.SwingUtilities
-import javax.swing.Timer
 
-object Client : JPanel() {
-    var socket: Socket? = null
-    var inReader: BufferedReader? = null
-    var outWriter: PrintWriter? = null
+class Client() : JFrame() {
+    // Connect to the server
+    val socket = Socket("localhost", 8080)
 
-    val scanner = Scanner(System.`in`)
+    // IO
+//    val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
+//    val writer = PrintWriter(socket.getOutputStream(), true)
+    val objectWriter = ObjectOutputStream(socket.getOutputStream())
+    var objectReader = ObjectInputStream(socket.getInputStream())
 
-    val timer = Timer(1) { run() }
+    var player = Player()
+    var state = ClientState.LOGIN
 
-    var state = ClientState.MENU
-    var window: Window = Window()
-    var game: Game? = null
-
-//    var pPlayer: Player? = null
-    var playerName: String = ""
 
     init {
-        SwingUtilities.invokeLater {
-            window.init()
-            timer.start()
 
-            println("engine running")
-        }
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        val panel = JPanel()
+        panel.setSize(400, 400)
+        setSize(400, 400)
+        add(panel)
+        pack()
+        isVisible = true
+
+        run()
     }
 
     fun run() {
-        when(state) {
-            ClientState.MENU -> {  }
-            ClientState.PLAYER_NAME -> {  }
-            ClientState.CONNECTING -> {
-                connect()
-                login()
+        Thread {
+            var players = setOf<Player>()
+            while (true) {
+                when (state) {
+
+                    ClientState.LOGIN -> {
+                        println("logging in")
+                        objectWriter.writeObject(Request(RequestType.LOGIN))
+                        player = objectReader.readObject() as Player
+                        println("client received id : ${player.id}")
+                        state = ClientState.GAME
+                    }
+
+                    ClientState.GAME -> {
+                        objectWriter.writeObject(Request(RequestType.PLAYERS))
+                        try {
+                            players = objectReader.readObject() as Set<Player>
+                            println("${player.id} : ${players}")
+                        } catch (e: Exception) {
+
+                        }
+
+//                        writer.println("message")
+//                        objectWriter.writeObject(players)
+                    }
+                }
+                Thread.sleep(100)
             }
-            ClientState.GAME -> {
-                game?.update()
-                repaint()
-            }
-        }
-        repaint()
+        }.start()
     }
 
-    private fun connect() {
-        try {
-            // Connect to the server
-            socket = Socket("localhost", 8081)
-            println("Connected to server")
-
-            // Set I/O
-            inReader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
-            outWriter = PrintWriter(socket!!.getOutputStream(), true)
-        } catch (e: IOException) {
-            e.printStackTrace()
-            state = ClientState.MENU
-        }
-    }
-
-    fun login() {
-        // Login to server
-        outWriter?.println("login $playerName")
-
-        // Read and process the response from the server
-        val response = inReader?.readLine()?.split(" ")
-        println(response)
-//        pPlayer = Player(response!![0], response[1].toInt(), response[2].toInt())
-
-        // Start the game
-        game = Game()
-        state = ClientState.GAME
-    }
-
-    override fun paint(gg: Graphics) {
-        super.paint(gg)
-        val g = gg as Graphics2D
-        when(state) {
-            ClientState.MENU -> g.drawString("press enter to connect", 150, 150)
-            ClientState.PLAYER_NAME -> {
-                g.drawString("Enter a name", 150, 100)
-                g.drawString(playerName, 150, 150)
-            }
-            ClientState.CONNECTING -> g.drawString("Connecting to server", 150, 150)
-            ClientState.GAME -> game?.draw(g)
-        }
-    }
 }
