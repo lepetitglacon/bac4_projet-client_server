@@ -39,10 +39,12 @@ class Server() : Thread() {
             println("New connection [$id] at $clientSocket")
 
             // IO
-//            val reader = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
-//            val writer = PrintWriter(clientSocket.getOutputStream(), true)
-            val objectWriter = ObjectOutputStream(clientSocket.getOutputStream())
-            val objectReader = ObjectInputStream(clientSocket.getInputStream())
+            val ins = clientSocket.getInputStream()
+            val ous = clientSocket.getOutputStream()
+            val reader = BufferedReader(InputStreamReader(ins))
+            val writer = PrintWriter(ous, true)
+            val objectWriter = ObjectOutputStream(ous)
+            val objectReader = ObjectInputStream(ins)
 
             // client Thread
             Thread {

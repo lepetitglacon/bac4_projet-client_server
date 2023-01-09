@@ -14,10 +14,12 @@ class Client() : JFrame() {
     val socket = Socket("localhost", 8080)
 
     // IO
-//    val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
-//    val writer = PrintWriter(socket.getOutputStream(), true)
-    val objectWriter = ObjectOutputStream(socket.getOutputStream())
-    var objectReader = ObjectInputStream(socket.getInputStream())
+    val ins = socket.getInputStream()
+    val ous = socket.getOutputStream()
+    val reader = BufferedReader(InputStreamReader(ins))
+    val writer = PrintWriter(ous, true)
+    val objectWriter = ObjectOutputStream(ous)
+    val objectReader = ObjectInputStream(ins)
 
     var player = Player()
     var state = ClientState.LOGIN
