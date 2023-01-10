@@ -3,17 +3,14 @@ package server
 import common.Player
 import common.Request
 import common.RequestType
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.io.PrintWriter
-import java.lang.Exception
+import common.Vec2
+import java.io.*
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.LinkedHashSet
+
 
 class Server() : Thread() {
     var running = true
@@ -23,7 +20,7 @@ class Server() : Thread() {
     val playersSync = Any()
 
     companion object {
-        var players = Collections.synchronizedSet<Player>(LinkedHashSet())
+        private val players = CopyOnWriteArrayList<Player>()
         var id = AtomicInteger(1)
     }
 
@@ -39,12 +36,8 @@ class Server() : Thread() {
             println("New connection [$id] at $clientSocket")
 
             // IO
-            val ins = clientSocket.getInputStream()
-            val ous = clientSocket.getOutputStream()
-            val reader = BufferedReader(InputStreamReader(ins))
-            val writer = PrintWriter(ous, true)
-            val objectWriter = ObjectOutputStream(ous)
-            val objectReader = ObjectInputStream(ins)
+            val objectWriter = ObjectOutputStream(clientSocket.getOutputStream())
+            val objectReader = ObjectInputStream(clientSocket.getInputStream())
 
             // client Thread
             Thread {
@@ -53,7 +46,6 @@ class Server() : Thread() {
                 try {
                     // handle client request
                     while (clientSocket.isConnected) {
-                        players = getAllConnectedPlayers()
                         val request = objectReader.readObject() as Request
                         when (request.type) {
                             RequestType.LOGIN -> {
@@ -63,9 +55,17 @@ class Server() : Thread() {
                                 objectWriter.writeObject(p)
                             }
                             RequestType.PLAYERS -> {
-                                val data = getAllConnectedPlayers()
-                                println("reader $id : ${data}")
-                                objectWriter.writeObject(data)
+                                synchronized(players) {
+                                    println(getAllConnectedPlayers())
+                                    objectWriter.writeUnshared(getAllConnectedPlayers())
+                                }
+                            }
+                            RequestType.MOVE -> {
+                                val vec = objectReader.readObject() as Vec2
+                                val p = players.find { it.id == id }
+                                p?.x = (p?.x ?: 0) + vec.x.toInt()
+                                p?.y = (p?.y ?: 0) + vec.y.toInt()
+                                replacePlayerToPlayers(p)
                             }
                         }
                     }
@@ -88,16 +88,31 @@ class Server() : Thread() {
 
     @Synchronized
     fun addPlayerToPlayers(p: Player) {
-        Server.players.add(p)
+        synchronized(players) {
+            Server.players.add(p)
+        }
+    }
+
+    @Synchronized
+    fun replacePlayerToPlayers(p: Player?) {
+        if (p != null)
+        synchronized(players) {
+            Server.players.removeIf { it.id == p.id }
+            Server.players.add(p)
+        }
     }
 
     @Synchronized
     fun removePlayerFromPlayers(id: Int) {
-        Server.players.removeIf { it.id == id }
+        synchronized(players) {
+            Server.players.removeIf { it.id == id }
+        }
     }
 
     @Synchronized
-    fun getAllConnectedPlayers(): Set<Player> {
-        return Server.players
+    fun getAllConnectedPlayers(): CopyOnWriteArrayList<Player> {
+        synchronized(players) {
+            return Server.players
+        }
     }
 }
