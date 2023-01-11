@@ -97,32 +97,49 @@ object Client : JFrame() {
     fun run() {
         Thread {
             while (true) {
-                when (state) {
 
-                    ClientState.LOGIN -> {
-                        println("logging in")
-                        objectWriter.writeObject(Request(RequestType.LOGIN))
-                        try { game.player = objectReader.readObject() as Player } catch(e: Exception) {e.printStackTrace()}
-                        println("client received id : ${game.player.id} ${game.player}")
-                        title += " ${game.player.id}"
-                        state = ClientState.GAME
+                val serverMessage = objectReader.readObject() as Request
+
+                when (serverMessage.type) {
+                    RequestType.LOGIN -> {
+                        synchronized(game.player) {
+                            game.player = serverMessage.data!! as Player
+                        }
                     }
 
-                    ClientState.GAME -> {
-                        objectWriter.writeObject(Request(RequestType.MOVE))
-                        try {// move
-                            objectWriter.writeUnshared(keyboardMovementVector)
-                        } catch (e: Exception) { }
-
-                        objectWriter.writeObject(Request(RequestType.PLAYERS))
-                        try {
-                            game.players = objectReader.readUnshared() as CopyOnWriteArrayList<Player>
-                            println(game.players)
-                        } catch (e: Exception) { }
-                    }
-
+                    RequestType.PLAYERS -> TODO()
+                    RequestType.MOVE -> TODO()
                 }
-                Thread.sleep(100)
+
+
+//                when (state) {
+//
+//                    ClientState.LOGIN -> {
+//                        println("logging in")
+//                        objectWriter.writeObject(Request(RequestType.LOGIN))
+//                        try { game.player = objectReader.readObject() as Player } catch(e: Exception) {e.printStackTrace()}
+//                        println("client received id : ${game.player.id} ${game.player}")
+//                        title += " ${game.player.id}"
+//                        state = ClientState.GAME
+//                    }
+//
+//                    ClientState.GAME -> {
+//                        objectWriter.writeObject(Request(RequestType.MOVE))
+//                        try {// move
+//                            objectWriter.writeUnshared(keyboardMovementVector)
+//                        } catch (e: Exception) { }
+//
+//                        objectWriter.writeObject(Request(RequestType.PLAYERS))
+//                        try {
+//                            synchronized(game.players) {
+//                                game.players = objectReader.readObject() as CopyOnWriteArrayList<Player>
+//                                println(game.players)
+//                            }
+//                        } catch (e: Exception) { }
+//                    }
+//
+//                }
+//                Thread.sleep(100)
             }
         }.start()
     }
@@ -160,6 +177,7 @@ object Client : JFrame() {
             keyboardMovementVector.x = 0.0
             keyboardMovementVector.y = 0.0
         }
+        Client.objectWriter.writeUnshared(keyboardMovementVector)
     }
 
 }

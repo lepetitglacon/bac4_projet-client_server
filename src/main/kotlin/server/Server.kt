@@ -17,8 +17,6 @@ class Server() : Thread() {
     val socket = ServerSocket(8080)
     val clientSockets: MutableSet<Socket> = mutableSetOf()
 
-    val playersSync = Any()
-
     companion object {
         private val players = CopyOnWriteArrayList<Player>()
         var id = AtomicInteger(1)
