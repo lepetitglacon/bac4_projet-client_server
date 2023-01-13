@@ -1,5 +1,5 @@
-import server.Server
+//import server.Server
 
 fun main() {
-    Server().start()
+    Server()
 }

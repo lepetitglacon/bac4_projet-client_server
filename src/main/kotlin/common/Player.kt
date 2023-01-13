@@ -1,12 +1,23 @@
 package common
 
+import java.awt.Color
 import java.awt.Graphics2D
 import java.io.Serializable
+import kotlin.random.Random
 
-class Player(val id: Int = 0, val name: String = "esteban", var x: Int = 0, var y: Int = 0) : Serializable {
+class Player(var id: Int = 0, val name: String = "esteban", var x: Int = 0, var y: Int = 0) : Serializable {
+    val color = Color(Random.nextInt(255), Random.nextInt(255), Random.nextInt(255))
 
     fun draw(g: Graphics2D) {
         g.drawOval(x, y, 16, 16)
+    }
+
+    fun xFromHero(player: Player): Int {
+        return x - 16 - player.x!! + 200
+    }
+
+    fun yFromHero(player: Player): Int {
+        return y - 16 - player.y!! + 200
     }
 
     override fun toString(): String {

@@ -1,116 +1,74 @@
-package server
-
 import common.Player
-import common.Request
-import common.RequestType
-import common.Vec2
-import java.io.*
+import java.io.BufferedReader
+import java.io.InputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.OutputStream
+import java.io.PrintWriter
+import java.io.Serializable
+import java.lang.Exception
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.*
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
+class Server {
+    private val port = 8080
+    private val serverSocket = ServerSocket(port)
+    val id = AtomicInteger(0)
+    private val clients = mutableMapOf<Socket, ObjectOutputStream>()
+    val players = Collections.synchronizedList(arrayListOf<Player>())
 
-class Server() : Thread() {
-    var running = true
-    val socket = ServerSocket(8080)
-    val clientSockets: MutableSet<Socket> = mutableSetOf()
-
-    companion object {
-        private val players = CopyOnWriteArrayList<Player>()
-        var id = AtomicInteger(1)
+    init {
+        start()
     }
 
-    override fun run() {
-        println("Server listening at $socket")
+    fun start() {
+        println("Server's running on port")
+        while (true) {
+            val socket = serverSocket.accept()
+            val objectWriter = ObjectOutputStream(socket.getOutputStream())
+            synchronized(clients) {
+                clients[socket] = objectWriter
+            }
 
-        while(running) {
-            val clientSocket = socket.accept()
-            clientSockets.add(clientSocket)
-
-            // get id
-            val id = Companion.id.getAndIncrement()
-            println("New connection [$id] at $clientSocket")
-
-            // IO
-            val objectWriter = ObjectOutputStream(clientSocket.getOutputStream())
-            val objectReader = ObjectInputStream(clientSocket.getInputStream())
-
-            // client Thread
-            Thread {
-                println("Thread for player $id running")
-
-                try {
-                    // handle client request
-                    while (clientSocket.isConnected) {
-                        val request = objectReader.readObject() as Request
-                        when (request.type) {
-                            RequestType.LOGIN -> {
-                                val p = Player(id, "joueur $id")
-                                addPlayerToPlayers(p)
-                                println("Player $id connected to the game")
-                                objectWriter.writeObject(p)
-                            }
-                            RequestType.PLAYERS -> {
-                                synchronized(players) {
-                                    println(getAllConnectedPlayers())
-                                    objectWriter.writeUnshared(getAllConnectedPlayers())
-                                }
-                            }
-                            RequestType.MOVE -> {
-                                val vec = objectReader.readObject() as Vec2
-                                val p = players.find { it.id == id }
-                                p?.x = (p?.x ?: 0) + vec.x.toInt()
-                                p?.y = (p?.y ?: 0) + vec.y.toInt()
-                                replacePlayerToPlayers(p)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    // delete player
-                    removePlayerFromPlayers(id)
-
-                    // clean connection
-                    clientSocket.close()
-                    clientSockets.remove(clientSocket)
+            try {
+                val playerId = id.getAndIncrement()
+                println("New player connected : $playerId")
+                val player = Player(playerId, "Joueur $playerId", Random.nextInt(200), Random.nextInt(200))
+                synchronized(players) {
+                    players.add(player)
+                    println("added player $players")
                 }
 
-            }.start()
-        }
+                objectWriter.writeUnshared(player)
+                objectWriter.flush()
 
-        // close clients connection and stop server socket
-        clientSockets.forEach { it.close() }
-        socket.close()
-    }
+                clients.forEach {
+                    println("writing data to client ${it.key}")
+                    println(players)
+                    it.value.writeUnshared(players)
+                    it.value.flush()
+                }
 
-    @Synchronized
-    fun addPlayerToPlayers(p: Player) {
-        synchronized(players) {
-            Server.players.add(p)
-        }
-    }
-
-    @Synchronized
-    fun replacePlayerToPlayers(p: Player?) {
-        if (p != null)
-        synchronized(players) {
-            Server.players.removeIf { it.id == p.id }
-            Server.players.add(p)
-        }
-    }
-
-    @Synchronized
-    fun removePlayerFromPlayers(id: Int) {
-        synchronized(players) {
-            Server.players.removeIf { it.id == id }
+//                    while(socket.isConnected) {
+//                        val message = reader.readLine()
+//
+//                        when(message) {
+//
+//                        }
+//                    }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
-    @Synchronized
-    fun getAllConnectedPlayers(): CopyOnWriteArrayList<Player> {
+    fun sendToAll() {
         synchronized(players) {
-            return Server.players
+
         }
+
     }
 }
